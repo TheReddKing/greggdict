@@ -51,22 +51,27 @@ const App = () => {
       <div className="font-sans max-w-xl mx-auto pt-1 px-2 sm:px-3">
         <GithubCorner />
         <Header />
+        <h3>Dictionary:</h3>
         <SearchContainer
           onSelectWord={setWord}
           seriesList={series}
           curSeries={curSeries}
           setSeries={changeSeries}
+          showSeries={true}
         />
-        <ImageContainer ismulti={false} word={word} series={curSeries} />
+        {word ? (
+          <ImageContainer ismulti={false} word={word} series={curSeries} />
+        ) : null}
         <Divider />
       </div>
       <div className="font-sans mx-auto pt-1 px-5 sm:px-3">
-        <h1>Multiwords</h1>
+        <h3>Sentences (not all words will be translated):</h3>
         <MultiWordContainer
           onSelectedWords={setWords}
           seriesList={series}
           curSeries={curSeries}
           setSeries={changeSeries}
+          showSeries={false}
         />
         <div style={{ display: "flex", flexWrap: "wrap" }}>
           {wordContainers}

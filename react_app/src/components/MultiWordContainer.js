@@ -74,18 +74,27 @@ const MultiWordContainer = ({
     setStr("");
   }
 
+  const parseSentences = (sentences) => {
+    let lowercased = sentences.toLowerCase();
+    const charsToRemove = [".", ",", '"', "'", "(", ")"];
+    let cleanSentences = lowercased;
+    for (const char of charsToRemove) {
+      cleanSentences = cleanSentences.replace(char, "");
+    }
+    return cleanSentences.split(" ").filter((word) => word.length > 0);
+  };
+
   useEffect(() => {
     if (str.length == 0) {
       onSelectedWords([]);
     } else {
-      let mywords = str.toLowerCase().replace(".", "").split(" ");
-      mywords = mywords.filter((word) => word.length > 0);
-      mywords = mywords
+      const mywords = parseSentences(str)
         .map((word) => {
           if (words[word] != null) {
             return words[word];
           }
-          let new_word = word.substring(0, word.length - 1);
+          // Try with removing characters up to an extra character or certain endings i.e. ing :D
+          const new_word = word.substring(0, word.length - 1);
           return words[new_word];
         })
         .filter((word) => word != null);

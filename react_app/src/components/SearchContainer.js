@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from "react";
 
-import Fuse from 'fuse.js';
+import Fuse from "fuse.js";
 
-import SearchInput from './SearchInput';
-import SearchSuggestions from './SearchSuggestions';
-import { dictRoot } from '../settings';
+import SearchInput from "./SearchInput";
+import SearchSuggestions from "./SearchSuggestions";
+import { dictRoot } from "../settings";
 
 const SEARCH_LIMIT = 50;
 
@@ -13,6 +13,7 @@ const SearchContainer = ({
   seriesList,
   curSeries,
   setSeries,
+  showSeries,
 }) => {
   // list of words with the corresponding page number
   const [words, setWords] = useState([]);
@@ -34,8 +35,8 @@ const SearchContainer = ({
 
       if (xhr.status === 200) {
         const reference = JSON.parse(xhr.responseText);
-        let response = (reference || []).flatMap(p =>
-          p.words.map(w => ({ ...w, page: p.page }))
+        let response = (reference || []).flatMap((p) =>
+          p.words.map((w) => ({ ...w, page: p.page }))
         );
         cached.current[curSeries] = response;
         setWords(response);
@@ -51,18 +52,18 @@ const SearchContainer = ({
         );
       }
     };
-    xhr.open('GET', `${dictRoot}/${curSeries}/reference.json`);
+    xhr.open("GET", `${dictRoot}/${curSeries}/reference.json`);
     xhr.send();
 
     return () => xhr.abort();
   }, [curSeries]);
 
-  const [str, setStr] = useState('');
+  const [str, setStr] = useState("");
 
   const fuse = useMemo(
     () =>
       new Fuse(words, {
-        keys: ['t'],
+        keys: ["t"],
         threshold: 0.2,
         useExtendedSearch: true,
       }),
@@ -84,11 +85,7 @@ const SearchContainer = ({
     setTimeout(() => {
       if (canceled) return;
 
-      setSugs(
-        fuse
-          .search(str)
-          .map(a => a.item)
-      );
+      setSugs(fuse.search(str).map((a) => a.item));
     }, 200);
 
     return () => (canceled = true);
@@ -100,14 +97,14 @@ const SearchContainer = ({
   useEffect(() => setSel(0), [str]);
 
   function selectWord(word) {
-    setStr('');
+    setStr("");
     onSelectWord(word);
   }
 
   function changeSeries(s) {
     setSeries(s);
     // reset word when changing series to get different suggestions
-    setStr('')
+    setStr("");
   }
 
   return (
@@ -121,6 +118,7 @@ const SearchContainer = ({
         series={seriesList}
         curSeries={curSeries}
         onChooseSeries={changeSeries}
+        showSeries={showSeries}
       />
       <SearchSuggestions
         suggestions={sugs}

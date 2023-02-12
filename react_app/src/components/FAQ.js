@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const Link = ({ href, children }) => (
   <a
@@ -31,25 +31,13 @@ const FAQ = () => (
           UNIX style search syntax is supported. White space acts as an AND
           operator, while a single pipe (|) character acts as an OR operator.
           Use "<code>ify$</code>" to search for words that end in "ify", like
-          "certify" and "classify". For full search syntax, see{' '}
+          "certify" and "classify". For full search syntax, see{" "}
           <a
             href="https://github.com/krisk/Fuse/blob/master/docs/examples.md#extended-search"
             className="font-bold border-b border-transparent hover:border-current"
           >
             this reference
           </a>
-          .
-        </span>
-      }
-    />
-    <QuestionAndAnswer
-      question="What do I do if something doesn't work or there is an incorrect word?"
-      answer={
-        <span>
-          You can report it using the feedback{' '}
-          <Link href="https://docs.google.com/forms/d/e/1FAIpQLSeFnUw8-oYluUpsaORb1krYowiq_JGeTuu_ibFhiIkKl5HJig/viewform?usp=sf_link">
-            Google Form
-          </Link>
           .
         </span>
       }
@@ -67,27 +55,6 @@ const FAQ = () => (
             see graph
           </Link>
           ).
-        </span>
-      }
-    />
-    <QuestionAndAnswer
-      question="How was this made?"
-      answer={
-        <span>
-          I used OCR to do text detection on the dictionary images, and then
-          built a web application with React to make it searchable. The code is{' '}
-          <Link href="https://github.com/richyliu/greggdict">open source</Link>
-        </span>
-      }
-    />
-    <QuestionAndAnswer
-      question="I have another question!"
-      answer={
-        <span>
-          Ask your questions using the{' '}
-          <Link href="https://docs.google.com/forms/d/e/1FAIpQLSeFnUw8-oYluUpsaORb1krYowiq_JGeTuu_ibFhiIkKl5HJig/viewform?usp=sf_link">
-            feedback form
-          </Link>
         </span>
       }
     />

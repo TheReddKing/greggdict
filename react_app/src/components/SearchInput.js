@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 
-import ChooseSeries from './ChooseSeries';
+import ChooseSeries from "./ChooseSeries";
 
 const SearchInput = ({
   value,
@@ -11,15 +11,16 @@ const SearchInput = ({
   series,
   onChooseSeries,
   curSeries,
+  showSeries,
 }) => {
   function keyDown(e) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       onEnter();
       e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       onArrowUp();
       e.preventDefault();
-    } else if (e.key === 'ArrowDown') {
+    } else if (e.key === "ArrowDown") {
       onArrowDown();
       e.preventDefault();
     }
@@ -29,7 +30,7 @@ const SearchInput = ({
     <div className="flex flex-row items-stretch w-full">
       <div className="flex-auto relative z-30 mr-1 sm:mr-2">
         <input
-          className="p-1 sm:px-2 bg-gray-200 focus:bg-white rounded w-full h-full"
+          className="p-1 py-2 sm:px-2 bg-gray-200 focus:bg-white rounded w-full h-full border-2"
           type="text"
           placeholder="Search..."
           autoComplete="off"
@@ -37,13 +38,13 @@ const SearchInput = ({
           autoCapitalize="off"
           autoFocus
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={keyDown}
         />
         {value.length > 0 && (
           <button
             className="absolute h-full px-2 mr-1 right-0 top-0 z-40"
-            onClick={() => onChange('')}
+            onClick={() => onChange("")}
           >
             <svg
               aria-hidden="true"
@@ -61,11 +62,13 @@ const SearchInput = ({
           </button>
         )}
       </div>
-      <ChooseSeries
-        series={series}
-        onChoose={onChooseSeries}
-        curSeries={curSeries}
-      />
+      {showSeries ? (
+        <ChooseSeries
+          series={series}
+          onChoose={onChooseSeries}
+          curSeries={curSeries}
+        />
+      ) : null}
     </div>
   );
 };

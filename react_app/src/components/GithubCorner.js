@@ -3,7 +3,7 @@ import React from 'react';
 /* Source: http://tholman.com/github-corners/ */
 const GithubCorner = () => (
   <a
-    href="https://github.com/richyliu/greggdict"
+    href="https://github.com/thereddking/greggdict"
     className="github-corner"
     aria-label="View source on GitHub"
   >
