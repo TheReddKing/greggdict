@@ -16,7 +16,7 @@ def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, ne
     coords = (x, y)
     new_processed_pixels.add(coords)
     try:
-        if (coords not in processed_pixels and coords not in master_set and img[y, x] < 100.0):
+        if (coords not in processed_pixels and coords not in master_set and img[y, x] < 150.0):
             # NOT WHITE
             new_set.add(coords)
             diff = 1
@@ -30,7 +30,7 @@ def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, ne
         pass
 
 
-def find_islands(already_assigned_pixels, new_pixels):
+def find_islands(already_assigned_pixels, new_pixels, maxx):
     # THOSE PESKY DOTS
 
     all_new_assigned_pixels = set()
@@ -49,7 +49,7 @@ def find_islands(already_assigned_pixels, new_pixels):
                 flood_fill(img, x + dx, y + dy, already_assigned_pixels,
                            new_assigned_pixels, new_pixels, new_island_pixels)
                 pixels_seen_ourselves.update(new_assigned_pixels)
-                if len(new_island_pixels) > 40:
+                if (len(new_island_pixels) > 0 and max([x for (x,y) in new_island_pixels]) > maxx):
                     continue
                 all_new_assigned_pixels.update(new_assigned_pixels)
                 all_new_island_pixels.update(new_island_pixels)
@@ -62,6 +62,7 @@ def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_t
     new_pixels = set()
     shapes = 0
     last_x = 0
+    skipped_to_word = False
     for x in range(minx, maxx):
         if (max_shapes > 0 and shapes >= max_shapes):
             break
@@ -81,15 +82,24 @@ def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_t
         if (max_shapes > 0 and last_x > 0 and x - last_x > 20):
             # SKIP TO THE BEST PART!
             max_shapes = shapes + 1
+            skipped_to_word = True
         max_x = max([x for (x, y) in new_pixels] + [x])
         min_x = min([x for (x, y) in new_pixels] + [x])
         last_x = max(last_x, max_x)
         width = max_x - min_x
+        print("FOUND", width, height)
         if (width > 8 or height > 8):
+            if (must_be_bigger_than > 0 and skipped_to_word):
+                if(len(new_processed_pixels) < must_be_bigger_than):
+                    continue
+            if (max_shapes == 1 and len(new_processed_pixels) < must_be_bigger_than):
+                continue
             processed_pixels.update(new_processed_pixels)
             pixels.update(new_pixels)
             # print(len(new_pixels))
             shapes += 1
+    if (max_shapes > 0):
+        print(max_shapes, shapes)
 
     return max(max_shapes - shapes, 0)
 
@@ -111,9 +121,10 @@ def get_pixels_for_words(words, img):
         maxx = getmaxx(minx, xs)
         max_shapes = len(word["t"])+1
         shapes = find(minx, maxx, y, pixels, processed_pixels,
-             max_shapes=max_shapes, must_be_bigger_than=80)
+             max_shapes=max_shapes, must_be_bigger_than=40)
         if (shapes > 0):
             # OH NO we didn't find something so let's be a bit greedy
+            print("GREEDY", minx, maxx)
             for y in range(-30 + y, 30 + y, 3):
                 shapes = find(minx, maxx, y, pixels, processed_pixels,
                     max_shapes=1, must_be_bigger_than=80)
@@ -121,20 +132,35 @@ def get_pixels_for_words(words, img):
         pixels_for_words[word["t"]] = pixels
 
     print("D1", datetime.now() - time)
-    for word in words:
-        pixels = pixels_for_words[word["t"]]
-        y = int(word["y"])
-        minx = int(word["x"])
+    for dy in range(-30, 30, 3):
+        for word in words:
+            pixels = pixels_for_words[word["t"]]
+            y = int(word["y"]) + dy
+            minx = int(word["x"])
 
-        maxx = getmaxx(minx, xs)
-        for y in range(-30 + y, 30 + y, 3):
-            find(minx, maxx, y, pixels, processed_pixels)
+            maxx = getmaxx(minx, xs)
+            print("larger word catching")
+            find(minx, maxx, y, pixels, processed_pixels, max_shapes=1, must_be_bigger_than=400)
 
     print("D1.5", datetime.now() - time)
     for word in words:
         # Find islands last
+        minx = int(word["x"])
+        maxx = getmaxx(minx, xs)
         pixels = pixels_for_words[word["t"]]
-        find_islands(processed_pixels, pixels)
+        find_islands(processed_pixels, pixels, maxx)
+
+    print("D1.7", datetime.now() - time)
+
+    for dy in range(-30, 30, 3):
+        for word in words:
+            pixels = pixels_for_words[word["t"]]
+            y = int(word["y"]) + dy
+            minx = int(word["x"])
+
+            maxx = getmaxx(minx, xs)
+            
+            find(minx, maxx, y, pixels, processed_pixels)
 
     print("D2", datetime.now() - time)
     # TRIM PIXELS
@@ -182,7 +208,12 @@ with open('output2.json', 'r') as file:
     if (val):
         new_word_dict = val
 
-
+specific_page=None
+import sys
+if len(sys.argv) >= 2:
+    specific_page = int(sys.argv[1])
+    data = data[specific_page-1: specific_page]
+    
 for page in data:
     filename = f'pages/{page["page"]}.png'
     output_filename = f"{page['page']}.png"
