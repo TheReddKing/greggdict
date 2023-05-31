@@ -17,9 +17,10 @@ def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, ne
     coords = (x, y)
     new_processed_pixels.add(coords)
     try:
-        if (coords not in processed_pixels and coords not in master_set and img[y, x] < 150.0):
+        if (coords not in processed_pixels and coords not in master_set and img[y, x] < 180.0):
             # NOT WHITE
-            new_set.add(coords)
+            if (img [y,x] < 150.0):
+                new_set.add(coords)
             diff = 1
             for dx in range(-diff, diff+1):
                 for dy in range(-diff, diff+1):
@@ -333,7 +334,9 @@ for page in data:
     # plt.savefig(f"output/{output_filename}",bbox_inches=(width/100, 160/100), pad_inches=0)
     # plt.close()
     # plt.show()
-    if not donotsave:
+    if donotsave:
+        print("NOT SAVED")
+    else:
         with open("output2.json", 'w') as file:
             # Write the JSON data to the file
             json.dump(new_word_dict, file)
