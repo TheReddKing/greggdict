@@ -59,13 +59,13 @@ def find_islands(already_assigned_pixels, new_pixels, maxx):
     new_pixels.update(all_new_island_pixels)
 
 
-def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_than=0):
+def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_than=0, min_dimension=8, max_dimension=400):
     new_processed_pixels = set()
     new_pixels = set()
     shapes = 0
     last_x = 0
     found_a_big_one = False
-    for x in range(minx, maxx):
+    for x in range(minx, maxx, 2):
         if (max_shapes > 0 and shapes >= max_shapes):
             break
         new_processed_pixels.clear()
@@ -89,7 +89,7 @@ def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_t
         last_x = max(last_x, max_x)
         width = max_x - min_x
         prints("FOUND", width, height)
-        if (width > 8 or height > 8):
+        if (width > min_dimension or height > min_dimension) and (width < max_dimension and height < max_dimension):
             if (must_be_bigger_than > 0):
                 if(len(new_processed_pixels) < must_be_bigger_than):
                     continue
@@ -151,7 +151,45 @@ def get_pixels_for_words(words, img):
                 if true_break:
                     break
 
+        if "h" in word['t'][0]:
+            # UGH I HATE WHEN THERE'S AN H!!!
+            # This is kinda dumb but oh well...
+            # either the highest or the leftest most point.
+            highest_pixel = None # leftmost highest pixel
+            leftest_pixel = None # highest leftmost pixel.
+            for (x,y) in pixels:
+                if (not highest_pixel) or (highest_pixel[1] > y) or (highest_pixel[1] == y and highest_pixel[0] < x):
+                    highest_pixel = x,y
+                if (not leftest_pixel) or (leftest_pixel[0] > x) or (leftest_pixel[0] == x and leftest_pixel[1] > y):
+                    leftest_pixel = x,y
+            print("Contains H", leftest_pixel, highest_pixel)
+            shapes_left = 1
+            for dy in range(-8, -25, -3):
+                shapes_left, _ = find(leftest_pixel[0], maxx, leftest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                if shapes_left == 0:
+                    prints("caught a H word")
+                    break
+                shapes_left, _ = find(highest_pixel[0], maxx, highest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                if shapes_left == 0:
+                    prints("caught a H word")
+                    break
+
+        # Deal with the ility
+        if "ility" in word['t'][-6:]:
+            # ENDS WITH A SWOOP
+            pass
+            bottom_most_pixel = None
+            for (x,y) in pixels:
+                if (not bottom_most_pixel) or (bottom_most_pixel[1] < y) or (bottom_most_pixel[1] == y and bottom_most_pixel[0] < x):
+                    bottom_most_pixel = x,y
+            for dy in range(-18, 0, 3):
+                _, found_a_big_one = find(bottom_most_pixel[0], maxx, bottom_most_pixel[1] + dy, pixels, processed_pixels, max_shapes=1, must_be_bigger_than=80)
+                if found_a_big_one:
+                    prints("caught a straggler")
+                    break
+
         pixels_for_words[word["t"]] = pixels
+
 
     prints("D1 - word found", datetime.now() - time)
     for dy in range(-30, 30, 3):
@@ -161,7 +199,7 @@ def get_pixels_for_words(words, img):
             minx = int(word["x"])
 
             maxx = getmaxx(minx, xs)
-            prints("larger word catching")
+            # prints("larger word catching")
             find(minx, maxx, y, pixels, processed_pixels,
                  max_shapes=1, must_be_bigger_than=400)
 
@@ -218,6 +256,7 @@ def get_pixels_for_words(words, img):
             trimmed_pixels_for_words[word["t"]] = set(
                 [(x, y) for (x, y) in pixels if x >= minx and x <= maxx])
         except:
+            trimmed_pixels_for_words[word["t"]] = pixels
             pass
 
     prints("D3", datetime.now() - time)
