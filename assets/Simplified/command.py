@@ -102,7 +102,7 @@ def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_t
             # prints(len(new_pixels))
             shapes += 1
     if (max_shapes > 0):
-        prints(max_shapes, shapes)
+        prints("Max:", max_shapes, "Found:", shapes)
 
     return max(max_shapes - shapes, 0), found_a_big_one
 
@@ -126,12 +126,12 @@ def get_pixels_for_words(words, img):
     processed_pixels = set()
     pixels_for_words = dict()
     for word in words:
-        prints("D0", word['t'])
         # MAX FIND ONE BIG ONE
         pixels = set()
         y = int(word["y"])
         minx = int(word["x"])
         maxx = getmaxx(minx, xs)
+        prints("D0", word['t'], minx, maxx)
         # Ws are annoying and sometimes might be confused as 2 words, therefore increase the max words for them by one.
         max_shapes = len(word["t"]) + 1 + word["t"].count("w")
         shapes, found_a_big_one = find(minx, maxx, y, pixels, processed_pixels,
@@ -226,6 +226,7 @@ def get_pixels_for_words(words, img):
 
     prints("D2", datetime.now() - time)
     # TRIM PIXELS
+    true_gaps = dict()
     trimmed_pixels_for_words = dict()
     for word in words:
         pixels = pixels_for_words[word["t"]]
@@ -244,6 +245,8 @@ def get_pixels_for_words(words, img):
             else:
                 if ingap >= 10 or (len(all_y_for_x) > 0 and max(all_y_for_x) - min(all_y_for_x) > 10):
                     gaps.append(x)
+                if ingap >= 30:
+                    true_gaps[word['t']] = x # END OF GAP
                 ingap = 0
                 all_y_for_x = set()
         # prints(word["t"],gaps)
@@ -260,6 +263,53 @@ def get_pixels_for_words(words, img):
             pass
 
     prints("D3", datetime.now() - time)
+    # Time to remove letters :D
+    for word in words:
+        prints("CLEANER", word['t'])
+        trimmed_pixels = trimmed_pixels_for_words[word["t"]]
+        # RESET EVERYTHING!!!!
+        pixels = set()
+        processed_pixels = set()
+        y = int(word["y"])
+        minx = min([x for (x,_) in trimmed_pixels]  + [getmaxx(int(word["x"]), xs)])
+        maxx = getmaxx(minx, xs)
+
+        if word['t'] in true_gaps:
+            # KEVIN DOESN'T KNOW IF THIS WORKS
+            # END OF GAP
+            if true_gaps[word['t']] > minx:
+                break
+        # go one by one on the minx maxx grind
+        while True:
+            shapes, found_a_big_one = find(minx, maxx, y, pixels, processed_pixels,
+                                        max_shapes=1, must_be_bigger_than=30)
+            if (found_a_big_one):
+                break
+            if (shapes == 0):
+                new_minx_left = min([x for (x,_) in pixels])
+                new_minx_right = max([x for (x,_) in pixels])
+                new_y_bottom = max([y for (_,y) in pixels])
+                new_y_top = min([y for (_,y) in pixels])
+                width = new_minx_right - new_minx_left
+                height = new_y_bottom - new_y_top
+                if (width < 30 and height < 20) or (width < 20 and height < 30):
+                    # LETTER
+                    # FOUND A SHAPE
+                    diff =  trimmed_pixels.difference(pixels)
+                    if len(diff) < 10:
+                        break
+                    trimmed_pixels = diff
+                    pixels = set()
+                    minx = new_minx_right
+                else:
+                    break
+            else:
+                break
+        
+        trimmed_pixels_for_words[word["t"]] = trimmed_pixels
+
+                
+    prints("D4", datetime.now() - time)
     return trimmed_pixels_for_words, pixels_for_words
 
 
@@ -312,8 +362,12 @@ for page in data:
         wy = int(word['y'])
 
         myx = int(word['x'])
-        x, y = min(allx) - 2, int(word['y']) - 80
-        z, v = max(allx) + 2, y + 160
+        if len(allx) == 0:
+            x, y = 0 - 2, int(word['y']) - 80
+            z, v = 100 + 2, y + 160
+        else:
+            x, y = min(allx) - 2, int(word['y']) - 80
+            z, v = max(allx) + 2, y + 160
         new_width = z - x
         cleanimg = np.full((160, new_width), 255, dtype=np.uint8)
         untrimmed_cleanimg = np.full((160, 400), 255, dtype=np.uint8)
