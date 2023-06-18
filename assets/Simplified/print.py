@@ -36,15 +36,16 @@ simple = [[["is"], 215, 230],
           [["."], 275, 300],
           [["me"], 310, 310+80]
           ]
-replacements = [["maid", ["made"]], ["his", ["is"]]]
-for (replacement, for_) in replacements:
-    for word in for_:
-        new_word_dict[word] = new_word_dict[replacement]
 
 for (words, x_start, x_end) in simple:
     for word in words:
         new_word_dict[word] = {"page": "simple.png",
                                "x_start": x_start, "x_end": x_end}
+
+replacements = [["maid", ["made"]], ["his", ["is"]], ["add", ["ad"]]]
+for (replacement, for_) in replacements:
+    for word in for_:
+        new_word_dict[word] = new_word_dict[replacement]
 
 
 def replace_if_ends_with(word, ends_with, replace_with):
@@ -142,8 +143,11 @@ def expand_apostrophes(string):
 
     return string
 
-max_width = 1000 # 1000/160 = 6.25
+
+max_width = 1000  # 1000/160 = 6.25
 max_lines = 9
+
+
 def write_sentence(sentence, add_text=False, is_practice=False):
     sentence = unidecode(sentence)
     replacement_words = [["that's", "that is"],
@@ -157,10 +161,10 @@ def write_sentence(sentence, add_text=False, is_practice=False):
     for a, b in replacement_words:
         words = words.replace(a, b)
     words = expand_apostrophes(words)
-    words = words.replace(",", " ").replace("-", " - ").replace(
-        ":", "").replace("?", " ? ").replace(
-        "\"", " ").replace("\'", " ").replace("/", " / ").replace(
-        "(", " ").replace(")", " ").replace("...", ".").replace(".", " . ").replace("\n", " pp ")
+    words = words.replace(",", " ").replace("-", " ").replace(
+        ":", " ").replace("? ", " ? ").replace(
+        "\"", " ").replace("\'", "").replace("/", " / ").replace(
+        "(", " ").replace(")", " ").replace("...", ". ").replace(".\n", " .\n").replace(". ", " . ").replace("\n\n", "\n").replace("\n", " \n ")
     words = words.split(" ")
     current_page = []
     combined_image = None
@@ -192,27 +196,35 @@ def write_sentence(sentence, add_text=False, is_practice=False):
             font_path = 'font.ttf'  # Path to the font file
             font_size = 12
             if is_practice:
-              fill = 160
+                fill = 160
             else:
-              fill = 80
+                fill = 80
             coords = (0, 10)
             if maybe_image is None:
                 # Increase the font size for bigger text
                 font_size = 24
                 fill = 60
                 coords = (5, 60)
-                new_image = Image.new('L', (200, 160), 255)
+                new_image = Image.new(
+                    'L', (max(max_width - 1 - width, 200), 160), 255)
                 word += " "
             else:
                 maybe_image = np.concatenate(
                     [maybe_image, np.asarray(Image.new('L', (100, 160), 255))], axis=1)
                 new_image = Image.fromarray(maybe_image)
-                word += " (" + dic["page"].split(".")[0] + ")"
+                page_name = dic["page"].split(".")[0]
+                if (page_name == "simple"):
+                    pass
+                else:
+                    word += " (" + dic["page"].split(".")[0] + ")"
             draw = ImageDraw.Draw(new_image)
 
             font = ImageFont.truetype(font_path, font_size)
-            text_width = int(draw.textlength(word, font=font))
-            draw.text(coords, word, font=font, fill=fill)
+            if ("\n" in word):
+                text_width = max_width - 11 - width
+            else:
+                text_width = int(draw.textlength(word, font=font))
+                draw.text(coords, word, font=font, fill=fill)
             new_width = max(new_width, text_width + 10)
             new_image = np.asarray(new_image)[0:160, 0:new_width]
             maybe_image = new_image
@@ -244,12 +256,13 @@ def write_sentence(sentence, add_text=False, is_practice=False):
         else:
             combined_page = line
         height += 160
-        if (i % max_lines == max_lines-1 ):
+        if (i % max_lines == max_lines-1):
             combined_pages.append(combined_page)
             combined_page = None
     if combined_page is not None:
         combined_pages.append(combined_page)
     return combined_pages
+
 
 args = sys.argv[1].split(".")
 filename = "".join(args[:-1])
@@ -260,10 +273,10 @@ with open(filename + "." + extension, "r") as file:
     print(text)
     with PdfPages(f'{filename}.pdf') as pdf:
         if practice:
-          cs = write_sentence(text, add_text=True, is_practice=True)
+            cs = write_sentence(text, add_text=True, is_practice=True)
         else:
-          cs = write_sentence(text, add_text=False) + \
-              write_sentence(text, add_text=True)
+            cs = write_sentence(text, add_text=False) + \
+                write_sentence(text, add_text=True)
         for i, c in enumerate(cs):
             plt.figure(figsize=(7.5, 10), dpi=100)
             plt.imshow(c, cmap='gray')

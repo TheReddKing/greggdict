@@ -11,6 +11,7 @@ def getmaxx(x, xs):
     for xx in xs:
         if (xx > x + 5):
             return int(xx) - 5
+    return xx
 
 
 def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, new_set):
@@ -164,15 +165,18 @@ def get_pixels_for_words(words, img):
                     leftest_pixel = x,y
             print("Contains H", leftest_pixel, highest_pixel)
             shapes_left = 1
-            for dy in range(-8, -25, -3):
-                shapes_left, _ = find(leftest_pixel[0], maxx, leftest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
-                if shapes_left == 0:
-                    prints("caught a H word")
-                    break
-                shapes_left, _ = find(highest_pixel[0], maxx, highest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
-                if shapes_left == 0:
-                    prints("caught a H word")
-                    break
+            if (not leftest_pixel and not highest_pixel):
+                pass
+            else:
+                for dy in range(-8, -25, -3):
+                    shapes_left, _ = find(leftest_pixel[0], maxx, leftest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                    if shapes_left == 0:
+                        prints("caught a H word")
+                        break
+                    shapes_left, _ = find(highest_pixel[0], maxx, highest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                    if shapes_left == 0:
+                        prints("caught a H word")
+                        break
 
         # Deal with the ility
         if "ility" in word['t'][-6:]:
@@ -236,18 +240,24 @@ def get_pixels_for_words(words, img):
         minx = int(word["x"])
         maxx = getmaxx(minx, xs)
         gaps = []
-        ingap = 0
+        not_gap = 0
+        in_gap = 0
         all_y_for_x = set()
         for x in range(minx, maxx+200):
             if (x in allx):
+                # Exists a pixel for the x
                 all_y_for_x.update(set([y for (x1, y) in pixels if x == x1]))
-                ingap += 1
+                not_gap += 1
+                if in_gap >= 30 and word['t'] not in true_gaps:
+                    true_gaps[word['t']] = x - 30 # END OF GAP
+                in_gap = 0
             else:
-                if ingap >= 10 or (len(all_y_for_x) > 0 and max(all_y_for_x) - min(all_y_for_x) > 10):
+                # NO PIXEL :(
+                if not_gap >= 10 or (len(all_y_for_x) > 0 and max(all_y_for_x) - min(all_y_for_x) > 10):
+                    # LETTER OR WORD
                     gaps.append(x)
-                if ingap >= 30:
-                    true_gaps[word['t']] = x # END OF GAP
-                ingap = 0
+                not_gap = 0
+                in_gap += 1
                 all_y_for_x = set()
         # prints(word["t"],gaps)
         try:
@@ -277,8 +287,8 @@ def get_pixels_for_words(words, img):
         if word['t'] in true_gaps:
             # KEVIN DOESN'T KNOW IF THIS WORKS
             # END OF GAP
-            if true_gaps[word['t']] > minx:
-                break
+            if true_gaps[word['t']] < minx:
+                continue
         # go one by one on the minx maxx grind
         while True:
             shapes, found_a_big_one = find(minx, maxx, y, pixels, processed_pixels,
@@ -317,6 +327,10 @@ with open('reference.json', 'r') as file:
     # Load the JSON data
     data = json.load(file)
 
+with open('reference_personal.json','r') as file:
+    data_personal = json.load(file)
+
+data = data + data_personal
 
 new_word_dict = dict()  # maps word -> { page, x_start, x_end }
 
@@ -328,8 +342,10 @@ with open('output2.json', 'r') as file:
 
 specific_page = None
 if len(sys.argv) >= 2:
-    specific_page = int(sys.argv[1])
-    data = data[specific_page-1: specific_page]
+    specific_page = sys.argv[1]
+    data = list(filter(lambda x: x["page"] == specific_page, data))
+    # data = data[specific_page-1: specific_page]
+print("PAGES TO PROCESS", len(data))
 
 
 donotsave = False
@@ -356,6 +372,7 @@ for page in data:
         pixels = pixels_for_words[word["t"]]
         untrimmed_pixels = untrimmed_pixels_for_words[word["t"]]
         allx = set([x for (x, y) in pixels])
+        ally = set([y for (_, y) in pixels])
         # x, y = int(word['x']), int(word['y']) - 80
         # z, v = x+400,y+160
 
@@ -368,13 +385,24 @@ for page in data:
         else:
             x, y = min(allx) - 2, int(word['y']) - 80
             z, v = max(allx) + 2, y + 160
+
+        # See if we can do some correction
+        try:
+            if (max(ally) > v and min(ally) > y) :
+                correction = min(30, 4 + max(ally) - v)
+                yc, vc = y + correction, v + correction
+            else:
+                yc, vc = y, v
+        except:
+            yc, vc = y, v
+
         new_width = z - x
         cleanimg = np.full((160, new_width), 255, dtype=np.uint8)
         untrimmed_cleanimg = np.full((160, 400), 255, dtype=np.uint8)
         for (c, r) in pixels:
-            if 0 <= (r-y) and (r-y) < 160 and \
+            if 0 <= (r-yc) and (r-yc) < 160 and \
                     0 <= c-x and c-x < new_width:
-                cleanimg[r-y, c-x] = 0
+                cleanimg[r-yc, c-x] = 0
         for (c, r) in untrimmed_pixels:
             if 0 <= (r-y) and (r-y) < 160 and \
                     0 <= c-myx and c-myx < 400:
@@ -413,7 +441,7 @@ for page in data:
         width += new_width
     prints(len(combined_image[0]), width)
     prints(len(combined_image), 160)
-    prints(combined_image[0])
+    # prints(combined_image[0])
     image = Image.fromarray(combined_image, mode='L')
     image.save(f"output2/{output_filename}")
     image = Image.fromarray(combined_image_for_debugging, mode='L')
