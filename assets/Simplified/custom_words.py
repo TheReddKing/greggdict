@@ -26,12 +26,31 @@ c.translate(0, height)
 words="""
 us
 her
-I-am
+i-am
 per
 my
 been
-I-can
-
+i-can
+does
+around
+?
+in-the
+memo
+in
+lot
+a-lot
+do-not
+email
+etc
+ness
+did-not
+ok
+okay
+using
+of-your
+you-will
+met
+get
 """.strip().split("\n")
 
 c.setStrokeColor(colors.black)
@@ -39,7 +58,8 @@ c.rect(0, 0, 400, 5, fill=True, stroke=True)
 w_dict = []
 diff = 80
 for i, word in enumerate(words):
-  d = {"t": word, "x": 20, "y": 20 + (i * 2 * diff + diff)}
+  modx = i // 8
+  d = {"t": word, "x": 20 + modx * 400, "y": 20 + (i * 2 * diff + diff)}
   c.drawString(d["x"] + 3, -d["y"] - font_size / 4, word)
 
 
