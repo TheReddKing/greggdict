@@ -6,6 +6,8 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from datetime import datetime
 
+sys.setrecursionlimit(10000)
+
 
 def getmaxx(x, xs):
     for xx in xs:
@@ -14,22 +16,33 @@ def getmaxx(x, xs):
     return xx
 
 
-def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, new_set):
+def flood_fill(img, x, y, processed_pixels, new_processed_pixels, master_set, new_set, use_supercutoff =False):
     coords = (x, y)
     new_processed_pixels.add(coords)
+    def in_range(x,y):
+        return 0 <= x < len(img[0]) and 0 <= y < len(img) 
     try:
-        if (coords not in processed_pixels and coords not in master_set and img[y, x] < 180.0):
+        if (coords not in processed_pixels and coords not in master_set and in_range(x,y) and img[y, x] < 180.0):
+            # ESSENTIALLY i used 170 to connect words togther so 150-180 is ignored but connected.
             # NOT WHITE
-            if (img [y,x] < 150.0):
+            # USED TO BE 150
+            cutoff = 150
+            super_cutoff =  150 # we can't do this because of how the words were processed.
+            if (img[y, x] < cutoff):
                 new_set.add(coords)
             diff = 1
             for dx in range(-diff, diff+1):
                 for dy in range(-diff, diff+1):
                     coords = (x + dx, y + dy)
+                    # if (in_range(coords[0], coords[1])):
+                    #     ## One must be dark to connect :)
+                    #     if (img[y,x] >= super_cutoff and img[coords[1],coords[0]] >= super_cutoff):
+                    #         continue
                     if (coords not in new_processed_pixels and coords not in processed_pixels):
                         flood_fill(
                             img, coords[0], coords[1], processed_pixels, new_processed_pixels, master_set, new_set)
-    except:
+    except Exception as e:
+        print("FLOODFILL ERROR", e)
         pass
 
 
@@ -107,15 +120,20 @@ def find(minx, maxx, y, pixels, processed_pixels, max_shapes=0, must_be_bigger_t
 
     return max(max_shapes - shapes, 0), found_a_big_one
 
+
 _print = print
 all_output = ""
+
+
 def prints(*x):
     global all_output
     _print(*x)
-    all_output += " ".join(list(map(lambda y:str(y), x))) + "\n"
+    all_output += " ".join(list(map(lambda y: str(y), x))) + "\n"
+
 
 def print(*x):
     prints(*x)
+
 
 def get_pixels_for_words(words, img):
     xs = set([word['x'] for word in words] + [len(img[0])])
@@ -137,7 +155,9 @@ def get_pixels_for_words(words, img):
         max_shapes = len(word["t"]) + 1 + word["t"].count("w")
         shapes, found_a_big_one = find(minx, maxx, y, pixels, processed_pixels,
                                        max_shapes=max_shapes, must_be_bigger_than=40)
-        if (shapes > 0 or (not found_a_big_one and len(word["t"]) > 5)):
+        if (word["t"].count("w") > 0 and found_a_big_one):
+            pass
+        elif (shapes > 0 or (not found_a_big_one and len(word["t"]) > 5)):
             # OH NO we didn't find something so let's be a bit greedy
             prints("Did not find what we wanted - GREEDY", minx, maxx)
             true_break = False
@@ -156,44 +176,55 @@ def get_pixels_for_words(words, img):
             # UGH I HATE WHEN THERE'S AN H!!!
             # This is kinda dumb but oh well...
             # either the highest or the leftest most point.
-            highest_pixel = None # leftmost highest pixel
-            leftest_pixel = None # highest leftmost pixel.
-            for (x,y) in pixels:
+            highest_pixel = None  # leftmost highest pixel
+            leftest_pixel = None  # highest leftmost pixel.
+            for (x, y) in pixels:
                 if (not highest_pixel) or (highest_pixel[1] > y) or (highest_pixel[1] == y and highest_pixel[0] < x):
-                    highest_pixel = x,y
+                    highest_pixel = x, y
                 if (not leftest_pixel) or (leftest_pixel[0] > x) or (leftest_pixel[0] == x and leftest_pixel[1] > y):
-                    leftest_pixel = x,y
+                    leftest_pixel = x, y
             print("Contains H", leftest_pixel, highest_pixel)
             shapes_left = 1
             if (not leftest_pixel and not highest_pixel):
                 pass
             else:
                 for dy in range(-8, -25, -3):
-                    shapes_left, _ = find(leftest_pixel[0], maxx, leftest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                    shapes_left, _ = find(leftest_pixel[0], maxx, leftest_pixel[1] + dy, pixels, processed_pixels,
+                                          max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
                     if shapes_left == 0:
                         prints("caught a H word")
                         break
-                    shapes_left, _ = find(highest_pixel[0], maxx, highest_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
+                    shapes_left, _ = find(highest_pixel[0], maxx, highest_pixel[1] + dy, pixels, processed_pixels,
+                                          max_shapes=shapes_left, must_be_bigger_than=10, min_dimension=3, max_dimension=10)
                     if shapes_left == 0:
                         prints("caught a H word")
                         break
 
-        # Deal with the ility
-        if "ility" in word['t'][-6:]:
-            # ENDS WITH A SWOOP
-            pass
-            bottom_most_pixel = None
-            for (x,y) in pixels:
-                if (not bottom_most_pixel) or (bottom_most_pixel[1] < y) or (bottom_most_pixel[1] == y and bottom_most_pixel[0] < x):
-                    bottom_most_pixel = x,y
-            for dy in range(-18, 0, 3):
-                _, found_a_big_one = find(bottom_most_pixel[0], maxx, bottom_most_pixel[1] + dy, pixels, processed_pixels, max_shapes=1, must_be_bigger_than=80)
-                if found_a_big_one:
-                    prints("caught a straggler")
-                    break
+        bottom_most_pixel = None
+        for (x, y) in pixels:
+            if (not bottom_most_pixel) or (bottom_most_pixel[1] < y) or (bottom_most_pixel[1] == y and bottom_most_pixel[0] < x):
+                bottom_most_pixel = x, y
+        if (bottom_most_pixel):
+            # Deal with the ility
+            if "ility" in word['t'][-6:]:
+                for dy in range(-18, 0, 3):
+                    _, found_a_big_one = find(
+                        bottom_most_pixel[0], maxx, bottom_most_pixel[1] + dy, pixels, processed_pixels, max_shapes=1, must_be_bigger_than=80)
+                    if found_a_big_one:
+                        prints("caught a straggler")
+                        break
+
+            # Deal with the 2 dashes cause it's propper
+            if word['t'].istitle():
+                shapes_left = 2
+                for dy in range(-10, 10, 3):
+                    shapes_left, _ = find(
+                        bottom_most_pixel[0], maxx, bottom_most_pixel[1] + dy, pixels, processed_pixels, max_shapes=shapes_left, must_be_bigger_than=10, max_dimension=25, min_dimension=8)
+                    if shapes_left == 0:
+                        prints("caught CAPITALIZER")
+                        break
 
         pixels_for_words[word["t"]] = pixels
-
 
     prints("D1 - word found", datetime.now() - time)
     for dy in range(-30, 30, 3):
@@ -249,7 +280,7 @@ def get_pixels_for_words(words, img):
                 all_y_for_x.update(set([y for (x1, y) in pixels if x == x1]))
                 not_gap += 1
                 if in_gap >= 30 and word['t'] not in true_gaps:
-                    true_gaps[word['t']] = x - 30 # END OF GAP
+                    true_gaps[word['t']] = x - 30  # END OF GAP
                 in_gap = 0
             else:
                 # NO PIXEL :(
@@ -263,8 +294,8 @@ def get_pixels_for_words(words, img):
         try:
             minx, maxx = (gaps[-2], gaps[-1])
             if len(gaps) >= 3:
-                minp, minx, maxx = (gaps[-3], gaps[-2], gaps[-1])     
-                if minx - minp  > maxx - minx:
+                minp, minx, maxx = (gaps[-3], gaps[-2], gaps[-1])
+                if minx - minp > maxx - minx:
                     minx = minp
             trimmed_pixels_for_words[word["t"]] = set(
                 [(x, y) for (x, y) in pixels if x >= minx and x <= maxx])
@@ -281,7 +312,8 @@ def get_pixels_for_words(words, img):
         pixels = set()
         processed_pixels = set()
         y = int(word["y"])
-        minx = min([x for (x,_) in trimmed_pixels]  + [getmaxx(int(word["x"]), xs)])
+        minx = min([x for (x, _) in trimmed_pixels] +
+                   [getmaxx(int(word["x"]), xs)])
         maxx = getmaxx(minx, xs)
 
         if word['t'] in true_gaps:
@@ -292,20 +324,20 @@ def get_pixels_for_words(words, img):
         # go one by one on the minx maxx grind
         while True:
             shapes, found_a_big_one = find(minx, maxx, y, pixels, processed_pixels,
-                                        max_shapes=1, must_be_bigger_than=30)
+                                           max_shapes=1, must_be_bigger_than=30)
             if (found_a_big_one):
                 break
             if (shapes == 0):
-                new_minx_left = min([x for (x,_) in pixels])
-                new_minx_right = max([x for (x,_) in pixels])
-                new_y_bottom = max([y for (_,y) in pixels])
-                new_y_top = min([y for (_,y) in pixels])
+                new_minx_left = min([x for (x, _) in pixels])
+                new_minx_right = max([x for (x, _) in pixels])
+                new_y_bottom = max([y for (_, y) in pixels])
+                new_y_top = min([y for (_, y) in pixels])
                 width = new_minx_right - new_minx_left
                 height = new_y_bottom - new_y_top
                 if (width < 30 and height < 20) or (width < 20 and height < 30):
                     # LETTER
                     # FOUND A SHAPE
-                    diff =  trimmed_pixels.difference(pixels)
+                    diff = trimmed_pixels.difference(pixels)
                     if len(diff) < 10:
                         break
                     trimmed_pixels = diff
@@ -315,10 +347,9 @@ def get_pixels_for_words(words, img):
                     break
             else:
                 break
-        
+
         trimmed_pixels_for_words[word["t"]] = trimmed_pixels
 
-                
     prints("D4", datetime.now() - time)
     return trimmed_pixels_for_words, pixels_for_words
 
@@ -327,7 +358,7 @@ with open('reference.json', 'r') as file:
     # Load the JSON data
     data = json.load(file)
 
-with open('reference_personal.json','r') as file:
+with open('reference_personal.json', 'r') as file:
     data_personal = json.load(file)
 
 data = data + data_personal
@@ -388,7 +419,7 @@ for page in data:
 
         # See if we can do some correction
         try:
-            if (max(ally) > v and min(ally) > y) :
+            if (max(ally) > v and min(ally) > y):
                 correction = min(30, 4 + max(ally) - v)
                 yc, vc = y + correction, v + correction
             else:
@@ -448,7 +479,7 @@ for page in data:
     image.save(f"output2_debug/{output_filename}")
     with open(f"output2_debug/{output_filename}.log", "w") as file:
         file.write(all_output)
-        
+
     # plt.figure(figsize=(width/100, 160/100), dpi=80)
     # plt.imshow(combined_image, cmap='gray')
     # plt.axis('off')
