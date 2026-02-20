@@ -448,6 +448,7 @@ for page in data:
             "page": output_filename,
             "x_start": width,
             "x_end": width + new_width}
+
         if combined_image is not None:
             combined_image = np.concatenate([combined_image, newimage], axis=1)
         else:

@@ -40,10 +40,10 @@ with open('output2.json', 'r') as file:
     # Load the JSON data
     new_word_dict = json.load(file)
 
-simple = [[["is"], 215, 230],
-          [["may"], 10, 80],
+simple = [[["\"", "'"], 215, 230],
+          [["may"], 10, 110],
           [["in"], 120, 120+30],
-          [["i"], 172, 178+21],
+          [["i"], 165, 178+21],
           [["a", "an"], 250, 256],
           [["."], 275, 300],
           [["me"], 310, 310+80]
@@ -87,6 +87,7 @@ def resize(array, new_shape):
 def find_single_word(maps, word):
     possible_words = [
         (word, None),
+        (word.capitalize(), "//"),
         (word[:-1], word[-1:]),
         replace_if_ends_with(word, "ing", ""),
         replace_if_ends_with(word, "ing", "e"),
@@ -114,6 +115,13 @@ def find_single_word(maps, word):
     lem_word = lemmatizer.lemmatize(word)
     if (lem_word in maps):
         return (maps[lem_word], word[len(lem_word):])
+
+    # Find dups with endings
+    for t_word, ends_with in possible_words:
+        if len(t_word) > 2 and t_word[-1] == t_word[-2]:
+            t_word = t_word[:-1]
+            if t_word in maps:
+                return (maps[t_word], ends_with)
 
     # Find homophones of the word
     if word in pronunciation_dict:
@@ -143,7 +151,7 @@ def find_word(maps, original_word):
         if bad_ending in original_word[-len(bad_ending):]:
             modder = len(bad_ending)
 
-    for i in range(2, len(original_word)- 1 - modder):
+    for i in range(2, len(original_word) - 1 - modder):
         word1 = original_word[0:i]
         word2 = original_word[i:]
         res = find_single_word(maps, word2)
@@ -200,7 +208,8 @@ def expand_apostrophes(string):
         "you're": "you are",
         "you've": "you have",
         "you'll": "you will",
-        "you'd": "you would"
+        "you'd": "you would",
+        "oh":"" # OH is not a valid word
     }
 
     for contraction, expansion in contractions.items():
@@ -226,9 +235,10 @@ def write_sentence(sentence, add_text=False, is_practice=False):
     for a, b in replacement_words:
         words = words.replace(a, b)
     words = expand_apostrophes(words)
+    words += " "
     words = words.replace(",", " ").replace("-", " ").replace(
         ":", " ").replace("? ", " ? ").replace(
-        "\"", " ").replace("\'", "").replace("/", " / ").replace(
+        "\"", " \" ").replace("\'", "").replace("/", " / ").replace(
         "(", " ").replace(")", " ").replace("...", ". ").replace(".\n", " .\n").replace(". ", " . ").replace("\n\n", "\n").replace("\n", " \n ")
     split_words = re.split(r' +', words)
     # Re combine words
